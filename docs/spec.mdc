@@ -1,0 +1,374 @@
+---
+title: RepsAI Cursor実装仕様書
+version: 1.0
+updated: 2026-02-16
+owner: product-dev
+---
+
+# RepsAI Cursor実装仕様書
+
+本書は、RepsAI（筋トレ記録 + AI提案アプリ）を Cursor で段階実装するための公式仕様書である。  
+要件、設計、実装順、検証基準を 1 つに統合し、AI 実装時の判断ブレを最小化する。
+
+## 1. 目的
+
+- 筋トレ記録を「保存」で終わらせず、AIが次回負荷と当日メニューを提案する。
+- オフラインでも記録を失わず、復帰時に同期できる体験を実現する。
+- MVPで価値検証し、停滞検知・予測・AIコーチへ段階拡張する。
+
+## 2. スコープ
+
+### 2.1 対象プラットフォーム
+
+- Flutter（iOS / Android）
+- MVPはスマホ優先（タブレット最適化は対象外）
+
+### 2.2 MVP必須機能
+
+- 認証（Email/Password）
+- プロフィール管理
+- 種目管理（プリセット + ユーザー追加）
+- ワークアウト記録（セッション/セット/サマリー）
+- AI提案（次回推奨重量/回数、今日の簡易メニュー）
+- 分析表示（e1RM・最大重量・実施回数/ボリューム）
+- オフライン保存 + オンライン同期
+
+### 2.3 拡張機能（MVP後）
+
+- Apple/Googleログイン
+- 停滞検知、疲労スコア、3ヶ月成長予測
+- AIコーチチャット
+- Guestモードからログイン移行の完全自動化
+
+## 3. 非機能要件
+
+- 通常起動 3 秒以内（初回起動を除く）
+- オフライン時の記録消失ゼロ
+- OpenAI キーをクライアントに置かない（Cloud Functions 経由）
+- AI送信データは最小限（PII最小化）
+
+## 4. 技術スタック（確定）
+
+### 4.1 Flutter
+
+- State: Riverpod（`hooks_riverpod`）
+- Routing: `go_router`
+- Model: `freezed` + `json_serializable`
+- Local DB: `isar`
+- HTTP: `dio`
+- Connectivity: `connectivity_plus`
+- Logging: `logger`
+
+### 4.2 Backend / Infra
+
+- Firebase Auth
+- Cloud Firestore
+- Cloud Functions（TypeScript）
+- （将来）Firebase App Check
+
+### 4.3 AI
+
+- OpenAI API（Cloud Functions 経由）
+- MVPはテキスト提案のみ
+
+## 5. アーキテクチャ方針
+
+- 軽量 Clean Architecture + Feature-based 構成
+- 依存方向: presentation -> domain -> data
+- UI から直接 remote/local datasource を呼ばない
+
+```text
+lib/
+  app/                 # router, bootstrap
+  core/                # error, network, constants, utils
+  features/
+    auth/
+    profile/
+    exercises/
+    workout/
+    analytics/
+    ai/
+    sync/
+```
+
+### 5.1 レイヤ責務
+
+- presentation: 画面、状態管理、入力バリデーション表示
+- domain: Entity、UseCase、Repository interface
+- data: DTO、Repository実装、local/remote datasource
+
+## 6. 画面仕様
+
+### 6.1 ナビゲーション
+
+- Bottom Tab: Home / Workout / Analytics / Profile
+
+### 6.2 画面一覧
+
+- Auth: `LoginScreen`, `SignupScreen`
+- Home: AI提案カード、今日のメニュー、直近セッション、開始CTA
+- Workout:
+  - `WorkoutStartScreen`
+  - `WorkoutSessionScreen`（種目・セット記録）
+  - `WorkoutFinishScreen`（サマリー + AIコメント）
+- Analytics: 種目別推移（e1RM、最大重量、週/月統計）
+- Profile: 目標編集、体重記録、同期状態、ログアウト
+
+## 7. データモデル仕様
+
+### 7.1 共通フィールド
+
+- `id`: String（UUID v4）
+- `createdAt`, `updatedAt`: DateTime（UTC）
+- `deletedAt`: DateTime?（論理削除）
+- `syncStatus`: enum（`synced` / `pending` / `failed`）
+
+### 7.2 Entity定義
+
+#### UserProfile
+
+- `userId: String`
+- `heightCm: int?`
+- `weightKg: double?`
+- `goal: hypertrophy | fat_loss | maintain`
+- `experience: beginner | intermediate | advanced`
+- `weeklyFrequency: int (1-7)`
+- `equipment: gym | home | dumbbell_only | bodyweight`
+
+#### Exercise
+
+- `id: String`
+- `ownerUserId: String?`（null = preset）
+- `name: String`
+- `muscleGroup: chest | back | legs | shoulders | arms | core | full_body`
+- `type: compound | isolation`
+- `isPreset: bool`
+
+#### WorkoutSession
+
+- `id: String`
+- `userId: String`
+- `startedAt: DateTime`
+- `endedAt: DateTime?`
+- `note: String?`
+- `items: List<WorkoutItem>`
+- `summary: WorkoutSummary?`
+
+#### WorkoutItem
+
+- `id: String`
+- `exerciseId: String`
+- `exerciseNameSnapshot: String`
+- `sets: List<WorkoutSet>`
+
+#### WorkoutSet
+
+- `id: String`
+- `weightKg: double`
+- `reps: int`
+- `rpe: double? (6.0-10.0)`
+- `note: String?`
+
+#### BodyWeightEntry
+
+- `id: String`
+- `userId: String`
+- `date: DateTime（UTC日付）`
+- `weightKg: double`
+
+#### AIRecommendation
+
+- `id: String`
+- `userId: String`
+- `createdAt: DateTime`
+- `type: next_load | daily_plan | session_comment`
+- `payloadJson: Map<String, dynamic>`
+- `sourceSessionId: String?`
+
+## 8. Firestore設計
+
+### 8.1 コレクション
+
+- `users/{userId}/profile`（doc）
+- `users/{userId}/exercises/{exerciseId}`
+- `users/{userId}/sessions/{sessionId}`
+- `users/{userId}/body_weights/{entryId}`
+- `users/{userId}/ai_recommendations/{recId}`
+- `users/{userId}/sync_queue/{queueId}`（将来用）
+
+### 8.2 方針
+
+- `sessions` は items/sets をネストし 1 セッション 1 ドキュメント完結
+- `updatedAt` を必須更新して競合解決に使用
+
+## 9. セキュリティ仕様
+
+### 9.1 Firestore Rules 方針
+
+- `users/{userId}/...` は `request.auth.uid == userId` のみ read/write
+- preset 種目はクライアント同梱（MVP）または read-only 領域
+
+### 9.2 データ保護
+
+- APIキーは Cloud Functions のみ保持
+- ログにトークン/PIIを出力しない
+- AIへは必要最小データのみ送信
+
+## 10. ローカルDB（Isar）仕様
+
+- entity 単位で collection を作成
+- 代表: `ExerciseEntity`, `SessionEntity`, `BodyWeightEntity`, `AIRecEntity`
+- `syncStatus` と `updatedAt` を必須保持
+- 削除は `deletedAt` による論理削除、同期完了後に物理削除
+
+## 11. 同期仕様（最重要）
+
+### 11.1 同期トリガー
+
+- アプリ起動時
+- ネットワーク復帰時
+- Profile 画面からの手動同期
+
+### 11.2 同期アルゴリズム（Last Write Wins）
+
+1. ローカル `pending/failed` を `updatedAt` 昇順で抽出
+2. Firestore へ upsert（`deletedAt` は論理削除反映）
+3. 成功したレコードを `synced` へ更新
+4. クラウド更新分を pull（`lastPulledAt` 以降）
+5. 競合時は `updatedAt` が新しい方を採用
+
+### 11.3 エラー時
+
+- `syncStatus = failed`
+- リトライは指数バックオフ（MVPでは最大3回の固定再試行可）
+
+## 12. AI仕様（Cloud Functions）
+
+### 12.1 エンドポイント
+
+- `POST /ai/recommend/next-load`
+- `POST /ai/recommend/daily-plan`
+- `POST /ai/comment/session`
+- （拡張）`POST /ai/chat`
+
+### 12.2 next-load I/O
+
+入力:
+- userProfile
+- exercise（名前/部位）
+- lastNPerformances（直近5回）
+- recentFatigueSignals（頻度/連続日数など）
+
+出力:
+- `recommendedWeightKg`
+- `recommendedReps`
+- `rationale`
+- `confidence (0-1)`
+
+### 12.3 プロンプト固定方針
+
+- 安全第一
+- 急激な増量禁止
+- 停滞時はデロード提案
+- 高RPE時は負荷抑制
+- 出力は JSON のみ（Functions 側で厳格パース）
+
+## 13. フォールバック仕様（AI障害時）
+
+- AI不可/オフライン時はローカルルールを採用
+- 判定:
+  - 前回成功（`reps >= target` かつ `RPE <= 8.5`）:
+    - 大筋群（胸/背中/脚）`+2.5kg`
+    - 小筋群（肩/腕/体幹）`+1.25kg`
+  - `RPE >= 9.5` または reps が 2 以上低下: `-5%`
+  - 同一重量で2回連続 rep 低下: `-2.5kg`
+
+## 14. テスト仕様
+
+### 14.1 Unit
+
+- e1RM 計算（Epley）
+- 同期差分判定
+- 推奨重量ローカルルール
+
+### 14.2 Widget
+
+- `WorkoutSessionScreen` の追加/編集/削除フロー
+
+### 14.3 Integration
+
+- Firebase Emulator を使った同期検証（段階導入）
+
+## 15. CI/CD初期方針
+
+- CI（将来）: GitHub Actions
+- 必須ジョブ:
+  - `flutter analyze`
+  - `flutter test`
+- 配布:
+  - iOS: TestFlight
+  - Android: Internal testing
+
+## 16. Cursor実装計画（順序固定）
+
+Cursorには一括生成させず、下記タスクを順次実行する。
+
+1. プロジェクト初期化（依存追加、lint/format/build_runner整備）
+2. ルーティング骨格（Auth遷移 + 4タブ）
+3. Freezedモデル実装（7章準拠）
+4. Isar実装（session CRUD優先）
+5. Firebase接続（Auth + Firestore）
+6. 同期エンジン（push/pull + LWW）
+7. Workout UI主導線（開始→記録→終了）
+8. Analytics UI（e1RM・履歴表示）
+9. Functions（AIプロキシ + バリデーション）
+10. Flutter AI統合（失敗時フォールバック含む）
+
+## 17. Cursor実装ルール（必須）
+
+- 1タスク = 1PR相当サイズ
+- 生成コードは `flutter analyze` を通す
+- 例外処理は `Result/Either` または `AppError` で統一
+- まず正しく動くUIを優先し、装飾改善は後段
+- 依存追加/更新は常に最新安定版を使用
+
+## 18. Cursorへの指示テンプレート
+
+### 18.1 実装依頼テンプレ
+
+```text
+Goal:
+Scope:
+Constraints:
+- Flutter iOS/Android 両対応
+- 依存は最新安定版
+- 既存アーキテクチャ準拠（feature + clean）
+
+Tasks:
+1)
+2)
+3)
+
+Validation:
+- flutter analyze
+- flutter test
+```
+
+### 18.2 レビュー依頼テンプレ
+
+```text
+この変更をレビューしてください。
+優先順位は CRITICAL -> HIGH -> MEDIUM です。
+各指摘は「場所 / 影響 / 修正案」で出してください。
+```
+
+## 付録A: e1RM
+
+- Epley: `e1RM = weight * (1 + reps / 30)`
+- reps が 1 の場合は重量そのものを採用
+
+## 付録B: 部位判定（簡易）
+
+- 大筋群: 胸 / 背中 / 脚
+- 小筋群: 肩 / 腕 / 体幹
+- 将来はユーザー設定で増分をカスタマイズ可能にする

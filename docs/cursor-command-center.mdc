@@ -1,0 +1,129 @@
+---
+title: Cursor実装 指令所
+version: 1.0
+updated: 2026-02-16
+---
+
+# Cursor実装 指令所
+
+このドキュメントは、`docs/spec.mdc` を基準に、`.cursor/rules` を適用しながら実装を進めるための運用ハブである。  
+「何を、どの順で、どのルールで、どこまで作るか」を固定する。
+
+## 1. 参照優先順位
+
+実装時は以下の順で参照する。
+
+1. `docs/spec.mdc`
+2. `.cursor/rules/00-flutter-context-engineering.mdc`
+3. `.cursor/rules/common/flutter-workflows.mdc`
+4. `.cursor/rules/common/flutter-task-orchestration.mdc`
+5. `.cursor/rules/common/flutter-verification.mdc`
+6. `.cursor/rules/security/flutter-security.mdc`
+7. ドメイン別ルール
+   - `.cursor/rules/frontend/flutter-frontend.mdc`
+   - `.cursor/rules/backend/flutter-backend.mdc`
+   - `.cursor/rules/test/flutter-test-strategy.mdc`
+   - `.cursor/rules/security/flutter-security-review.mdc`
+
+## 2. 実行原則（固定）
+
+- Android/iOS 両対応を前提に実装する。
+- 依存モジュールは常に最新安定版を使う。
+- 1タスク = 1PR相当サイズで分割する。
+- 変更説明は Goal / Scope / Rationale / Validation で記述する。
+- セキュリティ重大問題（CRITICAL/HIGH）は解消まで完了扱いにしない。
+
+## 3. 実装フェーズ（spec準拠）
+
+以下を順番に実施する（`docs/spec.mdc` の16章準拠）。
+
+1. 初期化（依存、lint、build_runner）
+2. ルーティング骨格（Auth + 4タブ）
+3. Freezedモデル
+4. Isar（session CRUD優先）
+5. Firebase（Auth + Firestore）
+6. 同期エンジン（push/pull + LWW）
+7. Workout UI主導線
+8. Analytics UI
+9. Cloud Functions（AIプロキシ）
+10. Flutter AI統合（フォールバック含む）
+
+## 4. Cursor投入テンプレート
+
+### 4.1 実装依頼テンプレート
+
+```text
+あなたはFlutter実装エージェントです。以下を厳守してください。
+
+Reference:
+- docs/spec.mdc
+- .cursor/rules/00-flutter-context-engineering.mdc
+- .cursor/rules/common/flutter-workflows.mdc
+- .cursor/rules/common/flutter-task-orchestration.mdc
+- .cursor/rules/common/flutter-verification.mdc
+- .cursor/rules/security/flutter-security.mdc
+- 必要に応じて frontend/backend/test/security ルール
+
+Goal:
+<今回タスクの目的>
+
+Scope:
+<変更対象ファイル/機能範囲>
+
+Constraints:
+- Flutter iOS/Android 両対応
+- 依存は最新安定版
+- Feature-based + Clean Architecture準拠
+- TDD（可能な範囲でRED->GREEN->REFACTOR）
+
+Tasks:
+1) <手順1>
+2) <手順2>
+3) <手順3>
+
+Validation:
+- flutter analyze
+- flutter test
+- 必要に応じて flutter test integration_test
+
+Output format:
+- Goal
+- Scope
+- Rationale
+- Validation
+```
+
+### 4.2 レビュー依頼テンプレート
+
+```text
+この変更をコードレビューしてください。
+優先順位は CRITICAL -> HIGH -> MEDIUM -> LOW です。
+各指摘は「場所 / 影響 / 修正案 / 再検証方法」で出力してください。
+セキュリティ観点は .cursor/rules/security/flutter-security-review.mdc を基準にしてください。
+```
+
+## 5. タスク開始時チェックリスト
+
+- [ ] 対応タスク番号（spec 16章）を明記した
+- [ ] 参照ルールをプロンプトに含めた
+- [ ] 実装スコープを最小化した（1タスク = 1PR）
+- [ ] 成功条件をテスト可能な形で定義した
+
+## 6. タスク完了時チェックリスト
+
+- [ ] `flutter analyze` が通る
+- [ ] `flutter test` が通る
+- [ ] Android/iOS 片側専用実装になっていない
+- [ ] 依存が最新安定版ポリシーに反していない
+- [ ] 変更説明が Goal/Scope/Rationale/Validation 形式である
+
+## 7. 失敗時のリカバリ手順
+
+- ビルド/解析エラーが多い場合: 最小単位で1件ずつ修正する。
+- 同期やAI連携で問題が再現しない場合: ローカル再現ケースを先に固定する。
+- セキュリティ懸念が出た場合: 機能追加より修正を優先する。
+
+## 8. 運用メモ
+
+- 指令所は「実装手順の入口」を担い、仕様詳細は常に `docs/spec.mdc` を正とする。
+- 新規ルールを追加した場合は、本ファイルの参照優先順位を更新する。
