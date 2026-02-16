@@ -1,0 +1,65 @@
+---
+description: Flutter frontendルール（UI/状態管理/Android iOS互換）
+globs: lib/**/*.dart,android/**,ios/**,pubspec.yaml
+alwaysApply: false
+---
+
+# Frontend Rules (Flutter)
+
+## Frontend Prompt Intent
+
+AIは frontend 実装時に、以下の情報が読める出力を行う:
+
+- どの画面・Widgetを変更するか
+- 状態管理の責務分離（UI層とロジック層）
+- Android/iOS 両プラットフォームでの動作差分
+- 影響するアクセシビリティ、パフォーマンス、UX
+
+## 実装方針
+
+- UI は `Widget` を小さく分割し、1ファイル1責務を守る。
+- `BuildContext` のライフサイクルを尊重し、非同期後の `mounted` チェックを徹底する。
+- 状態管理（Riverpod/Bloc/Provider など）は統一し、同一機能で混在させない。
+- `setState` の乱用を避け、再描画範囲を最小化する。
+- `const` コンストラクタと `const` Widget を積極利用する。
+
+## 実装ワークフロー（frontend）
+
+1. 変更前に対象画面と責務境界を定義する。
+2. Widget/状態管理のテストを先に追加する（可能な範囲でTDD）。
+3. 最小実装で挙動を成立させる。
+4. リファクタで可読性と再利用性を改善する。
+5. レンダリング負荷と操作導線を検証する。
+
+## Android/iOS 互換ガイド
+
+- 権限追加時は `android/app/src/main/AndroidManifest.xml` と `ios/Runner/Info.plist` を両方更新する。
+- URLスキーム、通知、ファイルアクセスはOS差異を明記し、分岐理由を残す。
+- ネイティブ連携（MethodChannel）は失敗時フォールバックと例外処理を必須にする。
+
+## パッケージ運用
+
+- UI系ライブラリは最新安定版を使用する。
+- バージョン指定は手動で固定せず、`flutter pub add <package>` を使う。
+- 依存追加時は、代替案比較より「既存アーキテクチャとの整合性」を優先する。
+
+## フロントエンドレビュー観点
+
+- CRITICAL: 認証状態漏えい、個人情報表示、危険な権限誘導
+- HIGH: クラッシュ、戻る遷移破綻、非同期競合、メモリリーク
+- MEDIUM: 可読性不足、再利用性不足、UI一貫性欠如
+
+## 参照ルール
+
+- 共通進め方: `common/flutter-workflows.mdc`
+- タスク運用: `common/flutter-task-orchestration.mdc`
+- 検証手順: `common/flutter-verification.mdc`
+- セキュリティ基準: `security/flutter-security.mdc`
+
+## 完了チェック
+
+- [ ] Android/iOS の双方でビルド・起動確認済み
+- [ ] レイアウト崩れ（小画面/大画面）を確認済み
+- [ ] 主要導線でクラッシュしない
+- [ ] 不要な `print` / `debugPrint` を残していない
+- [ ] 主要画面の Widget テストが追加・更新されている

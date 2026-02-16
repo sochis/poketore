@@ -1,0 +1,34 @@
+---
+description: Flutter向けGit運用（コミット形式・PR作成・履歴確認）
+alwaysApply: true
+---
+
+# Git Workflow (Flutter)
+
+## コミットメッセージ形式
+
+```
+<type>: <short description>
+
+<optional body>
+```
+
+type は次を利用する: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`
+
+## コミット前チェック
+
+- `flutter analyze` と `flutter test` の結果を確認する。
+- 秘密情報や不要ログが含まれていないか確認する。
+- Android/iOS設定変更がある場合は差分理由を明記する。
+
+## PR作成ワークフロー
+
+1. ブランチ分岐後の全コミット履歴を確認する（最新1件のみを見ない）。
+2. `git diff <base-branch>...HEAD` で差分全体を確認する。
+3. PR本文に Summary と Test plan を含める。
+4. 新規ブランチの場合は `git push -u` を使う。
+
+## 禁止事項
+
+- 不要な force push をしない（明示的指示がある場合を除く）。
+- 署名・フック・検証を迂回しない。

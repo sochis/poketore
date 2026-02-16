@@ -1,0 +1,64 @@
+---
+description: Flutter向けECCワークフロー（Plan/TDD/Code Review/Build Fix/Security Review/Docs）
+globs: lib/**/*.dart,test/**/*.dart,integration_test/**/*.dart,android/**,ios/**,pubspec.yaml
+alwaysApply: true
+---
+
+# ECC-Style Workflows (Flutter)
+
+このファイルは「いつ、どの進め方を選ぶか」を定義する。
+出力は Goal / Scope / Rationale / Validation を含むこと。
+
+## Plan Workflow
+
+適用条件: 仕様が曖昧、変更範囲が広い、設計トレードオフが大きい。
+
+1. 要件を再定義する（前提・非対象も明示）。
+2. リスクと依存を列挙する（Android/iOS差分含む）。
+3. フェーズ単位の手順を作る（順序・停止条件付き）。
+4. ユーザー承認前に実装しない。
+
+## TDD Workflow
+
+適用条件: 新機能、バグ修正、重要ロジック変更。
+
+1. 先に失敗テストを書く（RED）。
+2. 最小実装で通す（GREEN）。
+3. 構造改善し再度テストを通す（REFACTOR）。
+4. 80%以上のカバレッジを維持する（重要経路はより高く）。
+
+## Code Review Workflow
+
+1. 変更ファイル全体を確認する（単一ファイルに限定しない）。
+2. 優先順で指摘する:
+   - CRITICAL: 秘密情報、認証認可欠落、危険な権限設定、TLS無効化
+   - HIGH: クラッシュ起点、非同期競合、例外未処理、大きすぎる責務
+   - MEDIUM: テスト不足、可読性低下、拡張性不足
+3. 指摘は「場所 / 影響 / 修正案」をセットで示す。
+
+## Build Fix Workflow
+
+1. `flutter analyze` と `flutter test` を実行し、エラーを収集する。
+2. 1件ずつ最小差分で修正し、都度再実行する。
+3. 同一エラーが3回以上解消しない場合は設計見直しに戻る。
+4. 修正で新しい警告や退行を増やさない。
+
+## Security Review Workflow
+
+1. 入力点、保存先、通信経路の脅威モデルを列挙する。
+2. 秘密情報、認可、入力検証、依存脆弱性を確認する。
+3. CRITICAL/HIGH が残る場合は完了扱いにしない。
+4. 詳細は `security/flutter-security-review.mdc` を参照する。
+
+## Docs Update Workflow
+
+1. API仕様、セットアップ、環境変数の変更をドキュメントへ同期する。
+2. Android/iOSの追加設定は README か運用ガイドへ反映する。
+3. 実装とドキュメントに差分が残らないことを確認する。
+
+## ドメイン詳細の委譲先
+
+- frontend 詳細: `frontend/flutter-frontend.mdc`
+- backend 詳細: `backend/flutter-backend.mdc`
+- test 詳細: `test/flutter-test-strategy.mdc`
+- security 詳細: `security/flutter-security.mdc`

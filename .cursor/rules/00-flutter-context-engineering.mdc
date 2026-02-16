@@ -1,0 +1,56 @@
+---
+description: Flutterプロジェクト共通ルール（Android/iOS対応・最新依存運用・コンテキストエンジニアリング）
+alwaysApply: true
+---
+
+# Flutter Context Engineering Rules
+
+このプロジェクトでは、AI支援開発を **コンテキストエンジニアリング** 前提で行う。
+出力は常に「目的・制約・実装手順・検証観点」が読み取れる形で提示する。
+
+## 応答フォーマット（必須）
+
+すべての提案・実装説明は次の順序にする:
+
+1. Goal
+2. Scope
+3. Rationale
+4. Validation
+
+## 対象プラットフォーム
+
+- Flutter を中心に実装し、**Android / iOS の両方**を同時に成立させる。
+- 片方でのみ成立する実装（権限、ビルド設定、ネイティブ連携）は禁止。
+- プラットフォーム固有対応は `android/` と `ios/` に明示し、差分理由を記述する。
+
+## 依存モジュールとバージョン方針
+
+- 依存モジュールは **常に最新安定版** を採用する。
+- 追加・更新時は、バージョンを推測せず、パッケージマネージャで最新を取得する。
+- 可能な限り `flutter pub add <package>` を使い、手動で古い固定値を入れない。
+- 既存依存の更新では `flutter pub upgrade --major-versions` を優先し、破壊的変更は実装側で吸収する。
+- PR/変更説明では、依存更新理由（セキュリティ、互換性、保守性）を短く明記する。
+
+## 実行優先ルール
+
+以下の順に判断する:
+
+1. `common/flutter-workflows.mdc`
+2. `common/flutter-task-orchestration.mdc`
+3. `common/flutter-verification.mdc`
+4. `security/flutter-security.mdc`
+5. 各ドメインルール（frontend/backend/test）
+
+## ディレクトリ別ルール参照
+
+- `common/`: 計画、TDD、レビュー、検証、Git、性能/文脈管理
+- `frontend/`: UI、状態管理、ナビゲーション、UX
+- `backend/`: API連携、データ層、サーバーサイド連携
+- `test/`: unit/widget/integration テスト戦略
+- `security/`: 秘密情報、入力検証、認可、脆弱性対策
+
+## 完了条件
+
+- [ ] Android/iOS 両対応が崩れていない
+- [ ] 依存方針（最新安定版）が守られている
+- [ ] Goal/Scope/Rationale/Validation 形式で説明できる

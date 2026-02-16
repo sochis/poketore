@@ -1,0 +1,63 @@
+---
+description: Flutter backend連携ルール（API/Repository/データ整合性）
+globs: lib/**/*.dart,server/**/*.dart,backend/**/*.dart
+alwaysApply: false
+---
+
+# Backend Rules (Flutter App Integration)
+
+## Backend Prompt Intent
+
+AIは backend 関連実装時に、次を明確にする:
+
+- API仕様との対応関係（request/response）
+- データ変換層（DTO -> Domain）の責務
+- 失敗時のリトライ方針・タイムアウト方針
+- オフライン時の挙動と整合性
+
+## レイヤリング原則
+
+- `data`（API/DB）・`domain`（ユースケース）・`presentation`（UI）を分離する。
+- 通信処理は Repository 経由に限定し、UI から直接 HTTP 呼び出しをしない。
+- JSON 変換は型安全に行い、`dynamic` の垂れ流しを禁止する。
+
+## 実装ワークフロー（backend）
+
+1. API契約と例外契約を先に定義する。
+2. 失敗系（timeout/4xx/5xx/ネットワーク断）のテストを先に置く。
+3. 最小実装で成功・失敗フローを成立させる。
+4. ログ粒度、再試行条件、整合性を調整する。
+
+## API/永続化の実装基準
+
+- HTTP クライアント、認証、キャッシュライブラリは最新安定版を使う。
+- `flutter pub add` / `dart pub add` で依存を追加し、古いバージョンを固定しない。
+- API 呼び出しにはタイムアウト・例外分類・再試行条件を定義する。
+- ローカルストレージ書き込み時は、同時更新の競合を考慮する。
+
+## エラーハンドリング
+
+- ユーザー向けメッセージと内部ログを分離する。
+- 4xx/5xx/ネットワーク断を同一エラーとして扱わない。
+- サーバー応答に依存する分岐は、仕様未確定時にフォールバックを実装する。
+
+## バックエンド連携レビュー観点
+
+- CRITICAL: 認可欠落、秘密情報露出、TLS緩和、危険なローカル保存
+- HIGH: リトライ暴走、重複送信、競合更新、例外の握りつぶし
+- MEDIUM: DTO/Domain境界の曖昧さ、テスト不足、過剰結合
+
+## 参照ルール
+
+- 共通進め方: `common/flutter-workflows.mdc`
+- タスク運用: `common/flutter-task-orchestration.mdc`
+- 検証手順: `common/flutter-verification.mdc`
+- セキュリティ詳細: `security/flutter-security-review.mdc`
+
+## 完了チェック
+
+- [ ] API失敗時にUIが無限ローディングしない
+- [ ] タイムアウトとリトライの挙動がテストで担保されている
+- [ ] データ変換で null 安全が維持されている
+- [ ] Android/iOS 双方で同じ API 結果を再現できる
+- [ ] 認証期限切れ時の再認証フローが破綻しない

@@ -1,0 +1,30 @@
+---
+description: Flutter実装後の検証チェックポイント（成功条件再確認・analyze/test/build）
+globs: lib/**/*.dart,test/**/*.dart,integration_test/**/*.dart,android/**,ios/**
+alwaysApply: true
+---
+
+# Verification and Checkpoints (Flutter)
+
+## 実装後の必須検証
+
+1. 要件と成功条件に一致しているか再確認する。
+2. 以下のチェックを実行する:
+   - `flutter analyze`
+   - `flutter test`
+   - 必要に応じて `flutter test integration_test`
+3. Android/iOS 両方で影響範囲の動作確認を行う。
+
+## マルチフェーズ作業の検証
+
+- フェーズ完了ごとに「完了条件」と「残課題」を記録する。
+- 次フェーズへ進む前に、既存機能の退行有無を確認する。
+
+## 完了報告フォーマット
+
+報告には次を含める:
+
+- 何を変更したか（Scope）
+- なぜ必要だったか（Rationale）
+- 何で検証したか（Validation）
+- 保留事項（Deferred items）

@@ -1,0 +1,67 @@
+---
+description: Flutter testルール（TDD・unit/widget/integration・カバレッジ）
+globs: test/**/*.dart,integration_test/**/*.dart,lib/**/*.dart
+alwaysApply: false
+---
+
+# Test Rules (Flutter)
+
+## Test Prompt Intent
+
+AIはテスト作成時、以下を出力に含める:
+
+- どの責務を何のテストで担保するか
+- RED -> GREEN -> REFACTOR の進行
+- Android/iOS 差分をどのテストで検証するか
+- 未テスト領域と残リスク
+
+## TDD 基本フロー
+
+1. 先に失敗するテストを書く（RED）
+2. 最小実装で通す（GREEN）
+3. 再設計しながら可読性を上げる（REFACTOR）
+4. リグレッションテストを追加する
+
+## テスト実行原則
+
+- 実装より先にテストを追加し、失敗を確認してからコードを書く。
+- バグ修正は「再発防止テスト」を必須にする。
+- flaky なテストは原因を除去するまで完了扱いにしない。
+- テストが通るだけでなく、失敗時の説明可能性を重視する。
+
+## テスト分類
+
+- Unit: 純粋関数、Repository、UseCase のロジック
+- Widget: 画面状態、入力、バリデーション、表示分岐
+- Integration: 画面遷移、API連携、永続化を含む主要フロー
+
+## 品質基準
+
+- 全体カバレッジは 80% 以上を維持する。
+- クリティカル機能（認証、課金、データ更新）は 100% に近づける。
+- Flaky test を放置しない。原因（非同期待機、外部依存、時刻依存）を解消する。
+
+## コマンド方針
+
+- `flutter test` を基本とし、統合テストは `flutter test integration_test` を利用する。
+- 依存モック用パッケージも最新安定版を使う。
+- `flutter analyze` をテスト前後で実施し、型・Lint退行を防止する。
+
+## E2E/統合テスト指針
+
+- 固定sleep待機を避け、条件待機で安定化する。
+- Android/iOS の主要フロー（ログイン、更新、再起動復帰）を優先する。
+- 外部依存（時刻/API/ネットワーク）を制御し、CI再現性を確保する。
+
+## 参照ルール
+
+- 共通進め方: `common/flutter-workflows.mdc`
+- 検証基準: `common/flutter-verification.mdc`
+- セキュリティ観点の失敗系: `security/flutter-security.mdc`
+
+## 完了チェック
+
+- [ ] 追加機能に対応するテストが先に追加されている
+- [ ] 失敗系（例外・タイムアウト・バリデーション）を網羅した
+- [ ] CIで再現可能なテストのみで構成されている
+- [ ] カバレッジ目標（80%+）を満たしている

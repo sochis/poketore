@@ -1,0 +1,45 @@
+---
+description: Flutter向けセキュリティレビュー手順（OWASP観点・重大度分類・ブロック条件）
+globs: lib/**/*.dart,android/**,ios/**,server/**/*.dart,backend/**/*.dart,pubspec.yaml
+alwaysApply: true
+---
+
+# Security Review Workflow (Flutter)
+
+## 目的
+
+変更に対するセキュリティリスクを、重大度付きで評価し、出荷可否を判断する。
+
+## レビュー観点
+
+1. Secrets: ハードコード、ログ露出、配布物への混入
+2. AuthN/AuthZ: 認証不備、権限昇格、セッション不整合
+3. InputValidation: 注入攻撃、境界値、型不整合
+4. DataProtection: 平文保存、バックアップ漏えい、スクリーン露出
+5. Network: HTTPS強制、証明書検証、不要なTLS緩和
+6. DependencyRisk: 既知脆弱性、古い依存、メンテ停止ライブラリ
+
+## 重大度定義
+
+- CRITICAL: 直ちに悪用可能で、情報漏えい/不正操作に直結
+- HIGH: 悪用難度はあるが、実害が大きい
+- MEDIUM: 条件依存の問題、将来の脆弱性起点
+- LOW: 予防的改善、運用品質向上
+
+## ブロック条件
+
+- CRITICAL または HIGH が未解決なら完了・承認しない。
+- 例外的に保留する場合は、期限と回避策を必須で記録する。
+
+## レビュー出力フォーマット
+
+1. Finding（重大度）
+2. Location（対象ファイル/設定）
+3. Risk（想定される被害）
+4. Fix（具体的修正案）
+5. Validation（再確認方法）
+
+## 依存更新方針
+
+- セキュリティ関連依存は最新安定版を維持する。
+- 更新はパッケージマネージャ経由で行い、推測バージョン固定をしない。
