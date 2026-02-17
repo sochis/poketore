@@ -54,7 +54,7 @@ owner: product-dev
 - State: Riverpod（`hooks_riverpod`）
 - Routing: `go_router`
 - Model: `freezed` + `json_serializable`
-- Local DB: `isar`
+- Local DB: `drift` + `sqlite3_flutter_libs`
 - HTTP: `dio`
 - Connectivity: `connectivity_plus`
 - Logging: `logger`
@@ -214,10 +214,10 @@ lib/
 - ログにトークン/PIIを出力しない
 - AIへは必要最小データのみ送信
 
-## 10. ローカルDB（Isar）仕様
+## 10. ローカルDB（Drift）仕様
 
-- entity 単位で collection を作成
-- 代表: `ExerciseEntity`, `SessionEntity`, `BodyWeightEntity`, `AIRecEntity`
+- entity 単位で table を作成
+- 代表: `workout_sessions`, `exercises`, `body_weights`, `ai_recommendations`
 - `syncStatus` と `updatedAt` を必須保持
 - 削除は `deletedAt` による論理削除、同期完了後に物理削除
 
@@ -316,7 +316,7 @@ Cursorには一括生成させず、下記タスクを順次実行する。
 1. プロジェクト初期化（依存追加、lint/format/build_runner整備）
 2. ルーティング骨格（Auth遷移 + 4タブ）
 3. Freezedモデル実装（7章準拠）
-4. Isar実装（session CRUD優先）
+4. Drift実装（session CRUD優先）
 5. Firebase接続（Auth + Firestore）
 6. 同期エンジン（push/pull + LWW）
 7. Workout UI主導線（開始→記録→終了）

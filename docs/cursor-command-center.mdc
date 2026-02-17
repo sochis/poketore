@@ -40,7 +40,7 @@ updated: 2026-02-16
 1. 初期化（依存、lint、build_runner）
 2. ルーティング骨格（Auth + 4タブ）
 3. Freezedモデル
-4. Isar（session CRUD優先）
+4. Drift（session CRUD優先）
 5. Firebase（Auth + Firestore）
 6. 同期エンジン（push/pull + LWW）
 7. Workout UI主導線
